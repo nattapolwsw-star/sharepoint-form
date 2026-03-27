@@ -6,8 +6,8 @@ const CONFIG = {
   // --- Azure AD App Registration ---
   // สร้าง App Registration ที่ https://portal.azure.com
   // > Azure Active Directory > App registrations > New registration
-  CLIENT_ID: "YOUR_CLIENT_ID_HERE",          // Application (client) ID
-  TENANT_ID: "YOUR_TENANT_ID_HERE",          // Directory (tenant) ID
+  CLIENT_ID: "67bed771-115f-4cb7-b9bf-c40353ffe050",
+  TENANT_ID: "af3a83b6-13aa-4300-a5ae-b19c8c423a5a",
 
   // --- SharePoint ---
   SHAREPOINT_SITE_URL: "https://caathai.sharepoint.com/sites/ANS",
