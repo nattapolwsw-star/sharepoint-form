@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ANS RBOS - Data Entry Form</title>
+  <script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js"></script>
+  <script src="config.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f0f4f8;
+      min-height: 100vh;
+      color: #1a2a3a;
+    }
+
+    /* Header */
+    header {
+      background: linear-gradient(135deg, #003580 0%, #0050b3 100%);
+      color: white;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+    }
+    .header-left { display: flex; align-items: center; gap: 12px; }
+    .header-logo {
+      width: 44px; height: 44px;
+      background: white;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+    }
+    .header-title h1 { font-size: 1.1rem; font-weight: 700; }
+    .header-title p { font-size: 0.75rem; opacity: 0.8; margin-top: 2px; }
+
+    #loginBtn {
+      background: rgba(255,255,255,0.15);
+      border: 1.5px solid rgba(255,255,255,0.5);
+      color: white;
+      padding: 8px 18px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+      transition: background 0.2s;
+      display: flex; align-items: center; gap: 6px;
+    }
+    #loginBtn:hover { background: rgba(255,255,255,0.25); }
+    #loginBtn.logout { background: rgba(255,80,80,0.2); border-color: rgba(255,150,150,0.5); }
+
+    /* User badge */
+    #userBadge {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      color: white;
+      font-size: 0.82rem;
+    }
+    #userBadge .avatar {
+      width: 32px; height: 32px;
+      background: #40a9ff;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 0.9rem;
+    }
+
+    /* Main */
+    main {
+      max-width: 760px;
+      margin: 32px auto;
+      padding: 0 16px 40px;
+    }
+
+    /* Login prompt */
+    #loginPrompt {
+      background: white;
+      border-radius: 12px;
+      padding: 48px 32px;
+      text-align: center;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    }
+    #loginPrompt .icon { font-size: 3.5rem; margin-bottom: 16px; }
+    #loginPrompt h2 { font-size: 1.3rem; color: #003580; margin-bottom: 8px; }
+    #loginPrompt p { color: #666; margin-bottom: 24px; font-size: 0.9rem; }
+    .btnPrimary {
+      background: #0050b3;
+      color: white;
+      border: none;
+      padding: 12px 32px;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+      display: inline-flex; align-items: center; gap: 8px;
+    }
+    .btnPrimary:hover { background: #003580; }
+    .btnPrimary:disabled { background: #91caff; cursor: not-allowed; }
+
+    /* Form card */
+    #formCard {
+      display: none;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+      overflow: hidden;
+    }
+    .formHeader {
+      background: linear-gradient(135deg, #003580 0%, #0050b3 100%);
+      color: white;
+      padding: 20px 28px;
+    }
+    .formHeader h2 { font-size: 1.15rem; }
+    .formHeader p { font-size: 0.8rem; opacity: 0.8; margin-top: 4px; }
+
+    .formBody { padding: 28px; }
+
+    .formGrid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    .formGrid .full { grid-column: 1 / -1; }
+
+    .field label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #444;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+    .field label .required { color: #e53e3e; margin-left: 3px; }
+
+    .field input,
+    .field select,
+    .field textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1.5px solid #d1d9e0;
+      border-radius: 7px;
+      font-size: 0.92rem;
+      color: #1a2a3a;
+      background: #fafbfc;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      font-family: inherit;
+    }
+    .field input:focus,
+    .field select:focus,
+    .field textarea:focus {
+      outline: none;
+      border-color: #0050b3;
+      box-shadow: 0 0 0 3px rgba(0,80,179,0.12);
+      background: white;
+    }
+    .field textarea { resize: vertical; min-height: 90px; }
+
+    /* Level badges in select */
+    .level-hint { font-size: 0.74rem; color: #888; margin-top: 4px; }
+
+    /* Submit row */
+    .submitRow {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      margin-top: 28px;
+      padding-top: 20px;
+      border-top: 1px solid #eee;
+    }
+    .btnSecondary {
+      background: white;
+      color: #0050b3;
+      border: 1.5px solid #0050b3;
+      padding: 11px 24px;
+      border-radius: 7px;
+      font-size: 0.92rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btnSecondary:hover { background: #f0f4ff; }
+
+    /* Alert */
+    .alert {
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 0.88rem;
+      margin-bottom: 20px;
+      display: none;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .alert.show { display: flex; }
+    .alert-success { background: #f0fff4; border: 1px solid #68d391; color: #276749; }
+    .alert-error   { background: #fff5f5; border: 1px solid #fc8181; color: #9b2c2c; }
+    .alert-icon { font-size: 1.1rem; flex-shrink: 0; }
+
+    /* Spinner */
+    .spinner {
+      display: inline-block;
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,0.4);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Records table */
+    #recentSection {
+      display: none;
+      margin-top: 28px;
+    }
+    #recentSection h3 {
+      font-size: 0.9rem;
+      color: #003580;
+      font-weight: 700;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .recordBadge {
+      background: #e8f4ff;
+      border: 1px solid #b3d9ff;
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 0.85rem;
+      color: #003580;
+      margin-bottom: 8px;
+    }
+    .recordBadge strong { color: #0050b3; }
+
+    @media (max-width: 560px) {
+      .formGrid { grid-template-columns: 1fr; }
+      .formGrid .full { grid-column: 1; }
+      header { flex-wrap: wrap; gap: 10px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <div class="header-logo">✈️</div>
+    <div class="header-title">
+      <h1>ANS RBOS Data Entry</h1>
+      <p>Civil Aviation Authority of Thailand</p>
+    </div>
+  </div>
+  <div style="display:flex; align-items:center; gap:12px;">
+    <div id="userBadge">
+      <div class="avatar" id="userInitial">?</div>
+      <span id="userName">-</span>
+    </div>
+    <button id="loginBtn" onclick="handleAuth()">
+      <span>🔐</span><span id="loginBtnText">Sign in with Microsoft</span>
+    </button>
+  </div>
+</header>
+
+<main>
+  <!-- Login Prompt -->
+  <div id="loginPrompt">
+    <div class="icon">🔒</div>
+    <h2>กรุณาเข้าสู่ระบบ</h2>
+    <p>ใช้บัญชี Microsoft องค์กร (caathai) เพื่อบันทึกข้อมูลลง SharePoint</p>
+    <button class="btnPrimary" onclick="handleAuth()">
+      <span>🪟</span> Sign in with Microsoft
+    </button>
+  </div>
+
+  <!-- Form Card -->
+  <div id="formCard">
+    <div class="formHeader">
+      <h2>บันทึกข้อมูล ANSRBOS</h2>
+      <p>กรอกข้อมูลให้ครบถ้วน แล้วกด Submit เพื่อบันทึกลง SharePoint List</p>
+    </div>
+    <div class="formBody">
+
+      <div class="alert alert-success" id="alertSuccess">
+        <span class="alert-icon">✅</span>
+        <div>
+          <strong>บันทึกสำเร็จ!</strong> ข้อมูลถูกบันทึกลง SharePoint List เรียบร้อยแล้ว
+        </div>
+      </div>
+      <div class="alert alert-error" id="alertError">
+        <span class="alert-icon">❌</span>
+        <div id="alertErrorMsg">เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง</div>
+      </div>
+
+      <form id="dataForm" onsubmit="submitForm(event)">
+        <div class="formGrid">
+
+          <!-- Units Code -->
+          <div class="field">
+            <label>Units Code <span class="required">*</span></label>
+            <input type="text" id="unitsCode" placeholder="เช่น ANS-BKK-01" required />
+          </div>
+
+          <!-- Province -->
+          <div class="field">
+            <label>Province <span class="required">*</span></label>
+            <select id="province" required>
+              <option value="">-- เลือกจังหวัด --</option>
+              <option>กรุงเทพมหานคร</option><option>กระบี่</option><option>กาญจนบุรี</option>
+              <option>กาฬสินธุ์</option><option>กำแพงเพชร</option><option>ขอนแก่น</option>
+              <option>จันทบุรี</option><option>ฉะเชิงเทรา</option><option>ชลบุรี</option>
+              <option>ชัยนาท</option><option>ชัยภูมิ</option><option>ชุมพร</option>
+              <option>เชียงราย</option><option>เชียงใหม่</option><option>ตรัง</option>
+              <option>ตราด</option><option>ตาก</option><option>นครนายก</option>
+              <option>นครปฐม</option><option>นครพนม</option><option>นครราชสีมา</option>
+              <option>นครศรีธรรมราช</option><option>นครสวรรค์</option><option>นนทบุรี</option>
+              <option>นราธิวาส</option><option>น่าน</option><option>บึงกาฬ</option>
+              <option>บุรีรัมย์</option><option>ปทุมธานี</option><option>ประจวบคีรีขันธ์</option>
+              <option>ปราจีนบุรี</option><option>ปัตตานี</option><option>พระนครศรีอยุธยา</option>
+              <option>พะเยา</option><option>พังงา</option><option>พัทลุง</option>
+              <option>พิจิตร</option><option>พิษณุโลก</option><option>เพชรบุรี</option>
+              <option>เพชรบูรณ์</option><option>แพร่</option><option>ภูเก็ต</option>
+              <option>มหาสารคาม</option><option>มุกดาหาร</option><option>แม่ฮ่องสอน</option>
+              <option>ยโสธร</option><option>ยะลา</option><option>ร้อยเอ็ด</option>
+              <option>ระนอง</option><option>ระยอง</option><option>ราชบุรี</option>
+              <option>ลพบุรี</option><option>ลำปาง</option><option>ลำพูน</option>
+              <option>เลย</option><option>ศรีสะเกษ</option><option>สกลนคร</option>
+              <option>สงขลา</option><option>สตูล</option><option>สมุทรปราการ</option>
+              <option>สมุทรสงคราม</option><option>สมุทรสาคร</option><option>สระแก้ว</option>
+              <option>สระบุรี</option><option>สิงห์บุรี</option><option>สุโขทัย</option>
+              <option>สุพรรณบุรี</option><option>สุราษฎร์ธานี</option><option>สุรินทร์</option>
+              <option>หนองคาย</option><option>หนองบัวลำภู</option><option>อ่างทอง</option>
+              <option>อำนาจเจริญ</option><option>อุดรธานี</option><option>อุตรดิตถ์</option>
+              <option>อุทัยธานี</option><option>อุบลราชธานี</option>
+            </select>
+          </div>
+
+          <!-- Safety Performance Level -->
+          <div class="field">
+            <label>Safety Performance Level <span class="required">*</span></label>
+            <select id="safetyPerformanceLevel" required>
+              <option value="">-- เลือกระดับ --</option>
+              <option value="1">1 - Excellent</option>
+              <option value="2">2 - Good</option>
+              <option value="3">3 - Acceptable</option>
+              <option value="4">4 - Needs Improvement</option>
+              <option value="5">5 - Critical</option>
+            </select>
+            <p class="level-hint">1 = ดีที่สุด / 5 = ต้องปรับปรุงเร่งด่วน</p>
+          </div>
+
+          <!-- Operational Complexity Level -->
+          <div class="field">
+            <label>Operational Complexity Level <span class="required">*</span></label>
+            <select id="operationalComplexityLevel" required>
+              <option value="">-- เลือกระดับ --</option>
+              <option value="1">1 - Very Low</option>
+              <option value="2">2 - Low</option>
+              <option value="3">3 - Medium</option>
+              <option value="4">4 - High</option>
+              <option value="5">5 - Very High</option>
+            </select>
+            <p class="level-hint">1 = ซับซ้อนน้อย / 5 = ซับซ้อนมาก</p>
+          </div>
+
+          <!-- Rating Risk Assessment -->
+          <div class="field">
+            <label>Rating Risk Assessment <span class="required">*</span></label>
+            <select id="ratingRiskAssessment" required>
+              <option value="">-- เลือกระดับความเสี่ยง --</option>
+              <option value="Low">Low - ความเสี่ยงต่ำ</option>
+              <option value="Medium">Medium - ความเสี่ยงปานกลาง</option>
+              <option value="High">High - ความเสี่ยงสูง</option>
+              <option value="Very High">Very High - ความเสี่ยงสูงมาก</option>
+              <option value="Critical">Critical - วิกฤต</option>
+            </select>
+          </div>
+
+          <!-- Update Date -->
+          <div class="field">
+            <label>Update Date <span class="required">*</span></label>
+            <input type="date" id="updateDate" required />
+          </div>
+
+          <!-- Areas of Audit -->
+          <div class="field full">
+            <label>Areas of Audit <span class="required">*</span></label>
+            <textarea id="areasOfAudit" placeholder="ระบุพื้นที่หรือขอบเขตการตรวจสอบ เช่น&#10;- การควบคุมการจราจรทางอากาศ&#10;- ระบบนำร่องการบิน&#10;- อุปกรณ์สื่อสาร" required></textarea>
+          </div>
+
+        </div><!-- /formGrid -->
+
+        <div class="submitRow">
+          <button type="button" class="btnSecondary" onclick="clearForm()">Clear</button>
+          <button type="submit" class="btnPrimary" id="submitBtn">
+            <span id="submitIcon">💾</span>
+            <span id="submitText">Submit to SharePoint</span>
+          </button>
+        </div>
+      </form>
+
+    </div><!-- /formBody -->
+  </div><!-- /formCard -->
+
+  <!-- Recent records -->
+  <div id="recentSection">
+    <h3>รายการที่เพิ่งบันทึก</h3>
+    <div id="recentList"></div>
+  </div>
+
+</main>
+
+<script>
+// ============================================================
+//  MSAL Setup
+// ============================================================
+const msalConfig = {
+  auth: {
+    clientId:   CONFIG.CLIENT_ID,
+    authority:  `https://login.microsoftonline.com/${CONFIG.TENANT_ID}`,
+    redirectUri: CONFIG.REDIRECT_URI,
+  },
+  cache: { cacheLocation: "sessionStorage", storeAuthStateInCookie: false },
+};
+
+const msalInstance = new msal.PublicClientApplication(msalConfig);
+let currentAccount = null;
+
+// Handle redirect response on page load
+async function init() {
+  try {
+    const response = await msalInstance.handleRedirectPromise();
+    if (response) {
+      currentAccount = response.account;
+      showLoggedIn(currentAccount);
+    } else {
+      const accounts = msalInstance.getAllAccounts();
+      if (accounts.length > 0) {
+        currentAccount = accounts[0];
+        showLoggedIn(currentAccount);
+      }
+    }
+  } catch (e) {
+    console.error("Init error:", e);
+  }
+}
+
+function showLoggedIn(account) {
+  const name = account.name || account.username;
+  const initials = name.split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase();
+  document.getElementById("userInitial").textContent = initials;
+  document.getElementById("userName").textContent = name;
+  document.getElementById("userBadge").style.display = "flex";
+  document.getElementById("loginBtnText").textContent = "Sign out";
+  document.getElementById("loginBtn").classList.add("logout");
+  document.getElementById("loginPrompt").style.display = "none";
+  document.getElementById("formCard").style.display = "block";
+  // Set today's date as default
+  document.getElementById("updateDate").valueAsDate = new Date();
+}
+
+function showLoggedOut() {
+  currentAccount = null;
+  document.getElementById("userBadge").style.display = "none";
+  document.getElementById("loginBtnText").textContent = "Sign in with Microsoft";
+  document.getElementById("loginBtn").classList.remove("logout");
+  document.getElementById("loginPrompt").style.display = "block";
+  document.getElementById("formCard").style.display = "none";
+  document.getElementById("recentSection").style.display = "none";
+}
+
+async function handleAuth() {
+  if (currentAccount) {
+    // Logout
+    await msalInstance.logoutPopup({ account: currentAccount });
+    showLoggedOut();
+  } else {
+    // Login
+    try {
+      const result = await msalInstance.loginPopup({ scopes: CONFIG.SCOPES });
+      currentAccount = result.account;
+      showLoggedIn(currentAccount);
+    } catch (e) {
+      console.error("Login failed:", e);
+    }
+  }
+}
+
+// ============================================================
+//  Get Access Token
+// ============================================================
+async function getToken() {
+  const request = { scopes: CONFIG.SCOPES, account: currentAccount };
+  try {
+    const result = await msalInstance.acquireTokenSilent(request);
+    return result.accessToken;
+  } catch {
+    const result = await msalInstance.acquireTokenPopup(request);
+    return result.accessToken;
+  }
+}
+
+// ============================================================
+//  Submit Form → SharePoint REST API
+// ============================================================
+async function submitForm(e) {
+  e.preventDefault();
+  hideAlerts();
+
+  const btn    = document.getElementById("submitBtn");
+  const icon   = document.getElementById("submitIcon");
+  const text   = document.getElementById("submitText");
+
+  // Loading state
+  btn.disabled = true;
+  icon.innerHTML = '<span class="spinner"></span>';
+  text.textContent = "กำลังบันทึก...";
+
+  try {
+    const token = await getToken();
+    const f = CONFIG.FIELD_NAMES;
+
+    const body = { "__metadata": { "type": CONFIG.LIST_ITEM_ENTITY_TYPE } };
+    body[f.unitsCode]                  = document.getElementById("unitsCode").value.trim();
+    body[f.safetyPerformanceLevel]     = document.getElementById("safetyPerformanceLevel").value;
+    body[f.operationalComplexityLevel] = document.getElementById("operationalComplexityLevel").value;
+    body[f.ratingRiskAssessment]       = document.getElementById("ratingRiskAssessment").value;
+    body[f.province]                   = document.getElementById("province").value;
+    body[f.updateDate]                 = document.getElementById("updateDate").value + "T00:00:00Z";
+    body[f.areasOfAudit]               = document.getElementById("areasOfAudit").value.trim();
+
+    const endpoint = `${CONFIG.SHAREPOINT_SITE_URL}/_api/web/lists/getbytitle('${CONFIG.LIST_NAME}')/items`;
+
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type":  "application/json;odata=verbose",
+        "Accept":        "application/json;odata=verbose",
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      const msg = err?.error?.message?.value || `HTTP ${response.status}`;
+      throw new Error(msg);
+    }
+
+    const result = await response.json();
+    showSuccess();
+    addRecentRecord(result?.d);
+    clearForm();
+
+  } catch (err) {
+    showError(err.message);
+  } finally {
+    btn.disabled = false;
+    icon.textContent = "💾";
+    text.textContent = "Submit to SharePoint";
+  }
+}
+
+// ============================================================
+//  UI Helpers
+// ============================================================
+function showSuccess() {
+  const el = document.getElementById("alertSuccess");
+  el.classList.add("show");
+  setTimeout(() => el.classList.remove("show"), 5000);
+}
+
+function showError(msg) {
+  document.getElementById("alertErrorMsg").textContent = "เกิดข้อผิดพลาด: " + msg;
+  document.getElementById("alertError").classList.add("show");
+}
+
+function hideAlerts() {
+  document.getElementById("alertSuccess").classList.remove("show");
+  document.getElementById("alertError").classList.remove("show");
+}
+
+function clearForm() {
+  document.getElementById("dataForm").reset();
+  document.getElementById("updateDate").valueAsDate = new Date();
+  hideAlerts();
+}
+
+function addRecentRecord(item) {
+  if (!item) return;
+  const section = document.getElementById("recentSection");
+  const list    = document.getElementById("recentList");
+  section.style.display = "block";
+
+  const div = document.createElement("div");
+  div.className = "recordBadge";
+  div.innerHTML = `
+    <strong>${item[CONFIG.FIELD_NAMES.unitsCode] || item.Title || "-"}</strong>
+    &nbsp;|&nbsp; จังหวัด: ${item[CONFIG.FIELD_NAMES.province] || "-"}
+    &nbsp;|&nbsp; Risk: ${item[CONFIG.FIELD_NAMES.ratingRiskAssessment] || "-"}
+    &nbsp;|&nbsp; ID: #${item.ID}
+    <span style="float:right;color:#888;font-size:0.78rem">${new Date().toLocaleTimeString("th-TH")}</span>
+  `;
+  list.prepend(div);
+  // Keep max 5 records
+  while (list.children.length > 5) list.lastChild.remove();
+}
+
+// Start
+init();
+</script>
+</body>
+</html>
