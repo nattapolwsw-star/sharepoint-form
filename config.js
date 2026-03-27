@@ -20,13 +20,13 @@ const CONFIG = {
   // ⚠️ ตรวจสอบชื่อ Internal Name จริงได้ที่:
   //    https://caathai.sharepoint.com/sites/ANS/_api/web/lists/getbytitle('ANSRBOS')/fields?$filter=Hidden eq false&$select=Title,InternalName
   FIELD_NAMES: {
-    unitsCode:                 "Title",                          // หรือ UnitsCode
-    safetyPerformanceLevel:    "SafetyPerformanceLevel",         // ตรวจสอบ InternalName จริง
-    operationalComplexityLevel:"OperationalComplexityLevel",     // ตรวจสอบ InternalName จริง
-    ratingRiskAssessment:      "RatingRiskAssessment",           // ตรวจสอบ InternalName จริง
-    province:                  "Province",                       // ตรวจสอบ InternalName จริง
-    updateDate:                "UpdateDate",                     // ตรวจสอบ InternalName จริง
-    areasOfAudit:              "AreasofAudit",                   // ตรวจสอบ InternalName จริง
+    unitsCode:                  "Title",
+    safetyPerformanceLevel:     "SAFETYPERFORMANCELEVEL",
+    operationalComplexityLevel: "OPERATIONALCOMPLEXITYLEVEL",
+    ratingRiskAssessment:       "RatingRiskAssessment",
+    province:                   "Province",
+    updateDate:                 "UPDATEDATE",
+    areasOfAudit:               "AreasofAudit",
   },
 
   // --- List Item Entity Type (ชื่อ List ไม่มีช่องว่าง + ListItem) ---
