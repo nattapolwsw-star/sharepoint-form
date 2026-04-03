@@ -268,7 +268,7 @@
   <div id="loginPrompt">
     <div class="icon">🔒</div>
     <h2>กรุณาเข้าสู่ระบบ</h2>
-    <p>ใช้บัญชี Microsoft องค์กร (caathai) เพื่อบันทึกข้อมูลลง SharePoint</p>
+    <p>ใช้บัญชี Microsoft องค์กร <strong>@caat.or.th</strong> เพื่อบันทึกข้อมูลลง SharePoint</p>
     <button class="btnPrimary" onclick="handleAuth()">
       <span>🪟</span> Sign in with Microsoft
     </button>
@@ -421,7 +421,7 @@ const msalConfig = {
     authority:  `https://login.microsoftonline.com/${CONFIG.TENANT_ID}`,
     redirectUri: CONFIG.REDIRECT_URI,
   },
-  cache: { cacheLocation: "sessionStorage", storeAuthStateInCookie: false },
+  cache: { cacheLocation: "localStorage", storeAuthStateInCookie: true },
 };
 
 const msalInstance = new msal.PublicClientApplication(msalConfig);
@@ -429,6 +429,9 @@ let currentAccount = null;
 
 // Handle redirect response on page load
 async function init() {
+  // เคลียร์ interaction state ที่ค้างอยู่
+  Object.keys(localStorage).filter(k => k.includes("interaction.status")).forEach(k => localStorage.removeItem(k));
+
   try {
     const response = await msalInstance.handleRedirectPromise();
     if (response) {
@@ -437,8 +440,17 @@ async function init() {
     } else {
       const accounts = msalInstance.getAllAccounts();
       if (accounts.length > 0) {
-        currentAccount = accounts[0];
-        showLoggedIn(currentAccount);
+        const acc = accounts[0];
+        const email = acc.username || "";
+        if (email.toLowerCase().endsWith("@caat.or.th")) {
+          currentAccount = acc;
+          showLoggedIn(currentAccount);
+        } else {
+          try { await msalInstance.logoutPopup({ account: acc }); } catch {}
+          Object.keys(localStorage)
+            .filter(k => k.toLowerCase().includes("msal") || k.toLowerCase().includes("interaction"))
+            .forEach(k => localStorage.removeItem(k));
+        }
       }
     }
   } catch (e) {
@@ -472,17 +484,36 @@ function showLoggedOut() {
 
 async function handleAuth() {
   if (currentAccount) {
-    // Logout
-    await msalInstance.logoutPopup({ account: currentAccount });
+    // Logout แล้วเคลียร์ MSAL state ทั้งหมด
+    try { await msalInstance.logoutPopup({ account: currentAccount }); } catch {}
+    Object.keys(localStorage)
+      .filter(k => k.toLowerCase().includes("msal") || k.toLowerCase().includes("interaction"))
+      .forEach(k => localStorage.removeItem(k));
     showLoggedOut();
   } else {
-    // Login
+    // เคลียร์ stuck interaction state ก่อนทุกครั้ง
+    Object.keys(localStorage)
+      .filter(k => k.toLowerCase().includes("interaction"))
+      .forEach(k => localStorage.removeItem(k));
+
     try {
-      const result = await msalInstance.loginPopup({ scopes: CONFIG.SCOPES });
+      const result = await msalInstance.loginPopup({
+        scopes: ["openid", "profile", "User.Read"]
+      });
+      const email = result.account.username || "";
+      if (!email.toLowerCase().endsWith("@caat.or.th")) {
+        try { await msalInstance.logoutPopup({ account: result.account }); } catch {}
+        Object.keys(localStorage)
+          .filter(k => k.toLowerCase().includes("msal") || k.toLowerCase().includes("interaction"))
+          .forEach(k => localStorage.removeItem(k));
+        alert("⛔ ไม่มีสิทธิ์เข้าใช้งาน\nกรุณาใช้อีเมล @caat.or.th เท่านั้น");
+        return;
+      }
       currentAccount = result.account;
       showLoggedIn(currentAccount);
     } catch (e) {
       console.error("Login failed:", e);
+      alert("Login ไม่สำเร็จ: " + (e.message || e));
     }
   }
 }
