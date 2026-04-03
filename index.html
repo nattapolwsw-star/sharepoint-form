@@ -2265,28 +2265,36 @@ let spMsalInstance = null;
 let spCurrentAccount = null;
 
 function spInitMsal() {
-  if (!window.msal || !window.CONFIG) return;
-  const cfg = {
-    auth: {
-      clientId:    CONFIG.CLIENT_ID,
-      authority:   'https://login.microsoftonline.com/' + CONFIG.TENANT_ID,
-      redirectUri: CONFIG.REDIRECT_URI,
-    },
-    cache: { cacheLocation: 'localStorage', storeAuthStateInCookie: true },
-  };
-  spMsalInstance = new msal.PublicClientApplication(cfg);
+  if (spMsalInstance) return; // already initialized
+  if (!window.msal) { console.warn('spInitMsal: window.msal not ready'); return; }
+  if (!window.CONFIG) { console.warn('spInitMsal: window.CONFIG not ready'); return; }
+  try {
+    const cfg = {
+      auth: {
+        clientId:    CONFIG.CLIENT_ID,
+        authority:   'https://login.microsoftonline.com/' + CONFIG.TENANT_ID,
+        redirectUri: window.location.origin + window.location.pathname,
+      },
+      cache: { cacheLocation: 'localStorage', storeAuthStateInCookie: true },
+    };
+    spMsalInstance = new msal.PublicClientApplication(cfg);
+    console.log('spInitMsal: PublicClientApplication created OK');
 
-  // Clear stuck interaction state
-  Object.keys(localStorage).filter(k => k.includes('interaction.status')).forEach(k => localStorage.removeItem(k));
+    // Clear stuck interaction state
+    Object.keys(localStorage).filter(k => k.includes('interaction.status')).forEach(k => localStorage.removeItem(k));
 
-  spMsalInstance.handleRedirectPromise().then(resp => {
-    if (resp) { spOnLoginSuccess(resp.account); return; }
-    const accounts = spMsalInstance.getAllAccounts();
-    if (accounts.length > 0 && spIsAllowedEmail(accounts[0].username)) {
-      spCurrentAccount = accounts[0];
-      spShowLoggedIn();
-    }
-  }).catch(e => { console.error('SP init error:', e); spClearMsalState(); });
+    spMsalInstance.handleRedirectPromise().then(resp => {
+      if (resp) { spOnLoginSuccess(resp.account); return; }
+      const accounts = spMsalInstance.getAllAccounts();
+      if (accounts.length > 0 && spIsAllowedEmail(accounts[0].username)) {
+        spCurrentAccount = accounts[0];
+        spShowLoggedIn();
+      }
+    }).catch(e => { console.error('handleRedirectPromise error:', e); spClearMsalState(); });
+  } catch(e) {
+    console.error('spInitMsal FAILED:', e);
+    spMsalInstance = null;
+  }
 }
 
 function spIsAllowedEmail(email) {
