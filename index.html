@@ -8,7 +8,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js"></script>
+<script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js" onload="window._msalReady=true;document.dispatchEvent(new Event('msalReady'));" onerror="window._msalFallback=true;var s=document.createElement('script');s.src='https://unpkg.com/@azure/msal-browser@2.38.3/lib/msal-browser.min.js';s.onload=function(){window._msalReady=true;document.dispatchEvent(new Event('msalReady'));};document.head.appendChild(s);"></script>
 <script>
 const CONFIG = {
   CLIENT_ID: "67bed771-115f-4cb7-b9bf-c40353ffe050",
@@ -2442,18 +2442,25 @@ window.showPage = function(id, el) {
   if (id === 'input' && !spMsalInstance) spInitMsal();
 };
 
-// Fallback: ถ้ายังไม่ init ตอนกดปุ่ม ให้ init แล้ว retry
+// Fallback: รอ window.msal โหลดเสร็จก่อน แล้ว init และ login
 async function spHandleAuthSafe() {
-  if (!spMsalInstance) {
-    spInitMsal();
-    // รอ MSAL init สูงสุด 3 วินาที
-    for (let i = 0; i < 10; i++) {
-      await new Promise(r => setTimeout(r, 300));
-      if (spMsalInstance) break;
-    }
+  // รอ window.msal สูงสุด 10 วินาที
+  for (let i = 0; i < 50; i++) {
+    if (window.msal) break;
+    await new Promise(r => setTimeout(r, 200));
+  }
+  if (!window.msal) {
+    alert('โหลด MSAL library ไม่สำเร็จ\nกรุณาตรวจสอบการเชื่อมต่อ Internet แล้ว Refresh หน้าเว็บ');
+    return;
+  }
+  if (!spMsalInstance) spInitMsal();
+  // รอ spMsalInstance พร้อม
+  for (let i = 0; i < 10; i++) {
+    if (spMsalInstance) break;
+    await new Promise(r => setTimeout(r, 200));
   }
   if (!spMsalInstance) {
-    alert('โหลด MSAL ไม่สำเร็จ กรุณา Refresh หน้าเว็บแล้วลองใหม่');
+    alert('เริ่มต้นระบบ MSAL ไม่สำเร็จ กรุณา Refresh หน้าเว็บ');
     return;
   }
   spHandleAuth();
