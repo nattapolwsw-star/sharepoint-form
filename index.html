@@ -358,7 +358,7 @@ input:checked+.ssl::before{transform:translateX(14px);}
       <div class="page-subtitle">บันทึกข้อมูลเข้า SharePoint List โดยตรง | ต้องใช้บัญชี @caat.or.th</div>
     </div>
     <div class="header-actions" id="sp-header-actions">
-      <button class="btn btn-outline btn-sm" id="sp-login-btn" onclick="spHandleAuth()">🔐 Sign in with Microsoft</button>
+      <button class="btn btn-outline btn-sm" id="sp-login-btn" onclick="spHandleAuthSafe()">🔐 Sign in with Microsoft</button>
     </div>
   </div>
   <div style="padding:20px 24px;">
@@ -369,7 +369,7 @@ input:checked+.ssl::before{transform:translateX(14px);}
         <div style="font-size:3rem;margin-bottom:16px;">🔒</div>
         <div style="font-size:15px;font-weight:600;margin-bottom:8px;color:var(--text);">กรุณาเข้าสู่ระบบ</div>
         <div style="font-size:12px;color:var(--text2);margin-bottom:24px;">ใช้บัญชี Microsoft องค์กร <strong style="color:var(--accent);">@caat.or.th</strong> เพื่อบันทึกข้อมูลลง SharePoint</div>
-        <button class="btn btn-primary" onclick="spHandleAuth()" style="padding:10px 28px;font-size:13px;">🪟 Sign in with Microsoft</button>
+        <button class="btn btn-primary" onclick="spHandleAuthSafe()" style="padding:10px 28px;font-size:13px;">🪟 Sign in with Microsoft</button>
       </div>
     </div>
 
@@ -2411,17 +2411,26 @@ function spAddRecentRecord(item) {
   while (list.children.length > 5) list.lastChild.remove();
 }
 
-// Init MSAL when page-input is shown
+// Init MSAL ทันทีเมื่อหน้าโหลด (ไม่รอ lazy)
+document.addEventListener('DOMContentLoaded', () => {
+  spInitMsal();
+});
+
+// Hook showPage เผื่อกรณี DOMContentLoaded ไม่ทัน
 const _origShowPage = window.showPage;
 window.showPage = function(id, el) {
   if (_origShowPage) _origShowPage(id, el);
   if (id === 'input' && !spMsalInstance) spInitMsal();
 };
 
-// Also init if page-input is already active on load
-document.addEventListener('DOMContentLoaded', () => {
-  if (document.getElementById('page-input')?.classList.contains('active')) spInitMsal();
-});
+// Fallback: ถ้ายังไม่ init ตอนกดปุ่ม ให้ init แล้ว retry
+async function spHandleAuthSafe() {
+  if (!spMsalInstance) {
+    spInitMsal();
+    await new Promise(r => setTimeout(r, 300));
+  }
+  spHandleAuth();
+}
 </script>
 </body>
 </html>
